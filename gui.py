@@ -261,11 +261,36 @@ class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
     def _popdown_keypress(self, event: tk.Event[AutocompleteCombobox]) -> str | None:
         if event.keysym in self._IGNORED_KEYS:
             return
-        if not event.char and event.keysym not in self._EDIT_KEYS:
+        if not event.char.isprintable() and event.keysym not in self._EDIT_KEYS:
             return
         self._unpost_suggestions()
         self.focus_set()
-        self.event_generate("<KeyPress>", keysym=event.keysym)
+        try:
+            selection = self.index("sel.first"), self.index("sel.last")
+        except tk.TclError:
+            selection = None
+        if event.char.isprintable():
+            if selection is not None:
+                self.delete(*selection)
+            self.insert("insert", event.char)
+        elif selection is not None:
+            self.delete(*selection)
+        elif event.keysym == "BackSpace":
+            cursor = self.index("insert")
+            if cursor > 0:
+                self.delete(cursor - 1, cursor)
+        elif event.keysym == "Delete":
+            cursor = self.index("insert")
+            if cursor < self.index("end"):
+                self.delete(cursor, cursor + 1)
+        elif event.keysym == "Left":
+            self.icursor(max(0, self.index("insert") - 1))
+        elif event.keysym == "Right":
+            self.icursor(min(self.index("end"), self.index("insert") + 1))
+        elif event.keysym == "Home":
+            self.icursor(0)
+        elif event.keysym == "End":
+            self.icursor("end")
         self._autocomplete(event)
         return "break"
 
@@ -275,18 +300,6 @@ class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
         try:
             self.tk.call("ttk::combobox::Post", self._w)
             self._bind_popdown_input()
-            # ttk::combobox::Post gives the popup a grab and moves focus to
-            # its listbox. Release both so the next character is still
-            # delivered to the entry while the suggestions stay visible.
-            self.after(20, self._release_suggestions_capture)
-        except tk.TclError:
-            pass
-
-    def _release_suggestions_capture(self) -> None:
-        try:
-            popdown = self.tk.call("ttk::combobox::PopdownWindow", self._w)
-            self.tk.call("grab", "release", popdown)
-            self.tk.call("focus", self._w)
         except tk.TclError:
             pass
 

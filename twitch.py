@@ -38,6 +38,7 @@ from utils import (
     task_wrapper,
     RateLimiter,
     AwaitableValue,
+    Game,
     ExponentialBackoff,
 )
 from constants import (
@@ -1549,6 +1550,28 @@ class Twitch:
             campaigns.sort(key=lambda c: c.remaining_minutes)
             return campaigns[0]
         return None
+
+    async def search_games(self, query: str, *, limit: int = 100) -> list[Game]:
+        """Search all Twitch games/categories by name."""
+        query = query.strip()
+        if not query:
+            return []
+        auth_state = await self.get_auth()
+        headers = auth_state.headers(user_agent=self._client_type.USER_AGENT)
+        headers["Authorization"] = f"Bearer {auth_state.access_token}"
+        async with self.request(
+            "GET",
+            "https://api.twitch.tv/helix/search/categories",
+            params={"query": query, "first": limit},
+            headers=headers,
+        ) as response:
+            if response.status != 200:
+                raise RequestException(f"Game search failed: HTTP {response.status}")
+            response_json: JsonType = await response.json()
+        return [
+            Game({"id": game_data["id"], "name": game_data["name"]})
+            for game_data in response_json["data"]
+        ]
 
     async def get_live_streams(
         self, game: Game, *, limit: int = 20, drops_enabled: bool = True

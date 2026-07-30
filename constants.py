@@ -129,7 +129,10 @@ PING_TIMEOUT = timedelta(seconds=10)
 ONLINE_DELAY = timedelta(seconds=120)
 WATCH_INTERVAL = timedelta(seconds=59)
 # Strings
-WINDOW_TITLE = f"Twitch Drops Miner v{__version__} (by DevilXD)"
+FORK_OWNER = "catbardi"
+FORK_REPOSITORY = "https://github.com/catbardi/TwitchDropsMiner"
+ORIGINAL_REPOSITORY = "https://github.com/DevilXD/TwitchDropsMiner"
+WINDOW_TITLE = f"Twitch Drops Miner v{__version__} ({FORK_OWNER} fork)"
 # Logging
 LOGGING_LEVELS = {
     0: logging.ERROR,

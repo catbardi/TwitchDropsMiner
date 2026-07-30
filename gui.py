@@ -44,6 +44,9 @@ from constants import (
     IS_PACKAGED,
     SCRIPTS_PATH,
     WINDOW_TITLE,
+    FORK_OWNER,
+    FORK_REPOSITORY,
+    ORIGINAL_REPOSITORY,
     LOGGING_LEVELS,
     MAX_WEBSOCKETS,
     WS_TOPICS_LIMIT,
@@ -2165,18 +2168,34 @@ class HelpTab:
         LinkLabel(
             about, link="https://github.com/DevilXD", text="DevilXD"
         ).grid(column=1, row=0, sticky="nsew")
-        # About - repo link
-        ttk.Label(about, text="Repository: ", anchor="e").grid(column=0, row=1, sticky="nsew")
+        # About - fork maintainer
+        ttk.Label(about, text="Fork maintained by: ", anchor="e").grid(
+            column=0, row=1, sticky="nsew"
+        )
         LinkLabel(
-            about,
-            link="https://github.com/DevilXD/TwitchDropsMiner",
-            text="https://github.com/DevilXD/TwitchDropsMiner",
+            about, link=f"https://github.com/{FORK_OWNER}", text=FORK_OWNER
         ).grid(column=1, row=1, sticky="nsew")
+        # About - fork repository
+        ttk.Label(about, text="Fork repository: ", anchor="e").grid(
+            column=0, row=2, sticky="nsew"
+        )
+        LinkLabel(about, link=FORK_REPOSITORY, text=FORK_REPOSITORY).grid(
+            column=1, row=2, sticky="nsew"
+        )
+        # About - original repository
+        ttk.Label(about, text="Original repository: ", anchor="e").grid(
+            column=0, row=3, sticky="nsew"
+        )
+        LinkLabel(about, link=ORIGINAL_REPOSITORY, text=ORIGINAL_REPOSITORY).grid(
+            column=1, row=3, sticky="nsew"
+        )
         # About - donate
         ttk.Separator(
             about, orient="horizontal"
-        ).grid(column=0, row=2, columnspan=3, sticky="nsew")
-        ttk.Label(about, text="Donate: ", anchor="e").grid(column=0, row=3, sticky="nsew")
+        ).grid(column=0, row=4, columnspan=3, sticky="nsew")
+        ttk.Label(about, text="Donate to the original author: ", anchor="e").grid(
+            column=0, row=5, sticky="nsew"
+        )
         LinkLabel(
             about,
             link="https://www.buymeacoffee.com/DevilXD",
@@ -2185,7 +2204,7 @@ class HelpTab:
                 "please consider donating a small amount of money to support me. Thank you!"
             ),
             wraplength=self.WIDTH,
-        ).grid(column=1, row=3, sticky="nsew")
+        ).grid(column=1, row=5, sticky="nsew")
         # Useful links
         links = ttk.LabelFrame(
             center_frame, padding=(4, 0, 4, 4), text=_("gui", "help", "links", "name")

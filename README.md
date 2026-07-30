@@ -53,14 +53,6 @@ Twitch Drops Miner автоматически получает временны�
 - Отслеживание до `199` каналов.
 - Поддержка Windows, Linux и macOS.
 
-## Скриншоты
-
-![Главное окно](https://user-images.githubusercontent.com/4180725/164298155-c0880ad7-6423-4419-8d73-f3c053730a1b.png)
-
-![Инвентарь](https://user-images.githubusercontent.com/4180725/164298315-81cae0d2-24a4-4822-a056-154fd763c284.png)
-
-![Настройки](https://user-images.githubusercontent.com/4180725/164298391-b13ad40d-3881-436c-8d73-f3c053730a1b.png)
-
 ## Важная информация
 
 > [!WARNING]

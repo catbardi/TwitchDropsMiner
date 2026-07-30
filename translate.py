@@ -84,6 +84,7 @@ class GUILoginForm(TypedDict):
     password: str
     twofa_code: str
     button: str
+    logout: str
 
 
 class GUIWebsocket(TypedDict):
@@ -310,6 +311,7 @@ default_translation: Translation = {
             "password": "Password",
             "twofa_code": "2FA code (optional)",
             "button": "Login",
+            "logout": "Logout",
         },
         "websocket": {
             "name": "Websocket Status",

@@ -666,10 +666,22 @@ class LoginForm:
         # self._token_entry.grid(column=0, row=3, columnspan=2)
 
         self._confirm = asyncio.Event()
+        buttons_frame = ttk.Frame(frame)
+        buttons_frame.grid(column=0, row=4, columnspan=2)
         self._button = ttk.Button(
-            frame, text=_("gui", "login", "button"), command=self._confirm.set, state="disabled"
+            buttons_frame,
+            text=_("gui", "login", "button"),
+            command=self._confirm.set,
+            state="disabled",
         )
-        self._button.grid(column=0, row=4, columnspan=2)
+        self._button.grid(column=0, row=0, padx=(0, 2))
+        self._logout_button = ttk.Button(
+            buttons_frame,
+            text=_("gui", "login", "logout"),
+            command=self.logout,
+            state="disabled",
+        )
+        self._logout_button.grid(column=1, row=0, padx=(2, 0))
         self.update(_("gui", "login", "logged_out"), None)
 
     def clear(self, login: bool = False, password: bool = False, token: bool = False):
@@ -732,6 +744,38 @@ class LoginForm:
         else:
             user_str = "-"
         self._var.set(f"{status}\n{user_str}")
+        authenticated = user_id is not None
+        if authenticated:
+            self._button.grid_remove()
+            self._logout_button.grid()
+        else:
+            self._logout_button.grid_remove()
+            self._button.grid()
+        self._button.config(
+            state=("disabled" if authenticated or status not in (
+                _("gui", "login", "logged_out"),
+                _("gui", "login", "required"),
+            ) else "normal")
+        )
+        self._logout_button.config(state="normal" if authenticated else "disabled")
+
+    def logout(self) -> None:
+        asyncio.create_task(task_wrapper(self._logout)())
+
+    async def _logout(self) -> None:
+        auth_state = await self._manager._twitch.get_auth()
+        async with self._manager._twitch.request(
+            "POST",
+            "https://id.twitch.tv/oauth2/revoke",
+            data={
+                "client_id": self._manager._twitch._client_type.CLIENT_ID,
+                "token": auth_state.access_token,
+            },
+        ) as response:
+            if response.status != 200:
+                logger.error(f"Failed to revoke the auth token: {response.status}")
+        auth_state.invalidate(delete_cookies=True)
+        self._manager._twitch.change_state(State.RESTART)
 
 
 class _BaseVars(TypedDict):
@@ -2274,9 +2318,6 @@ class HelpTab:
         # use a frame to center the content within the tab
         center_frame = ttk.Frame(master)
         center_frame.grid(column=0, row=0)
-        # use a frame for the bottom row specifically
-        bottom_frame = ttk.Frame(master)
-        bottom_frame.grid(column=0, row=1, sticky="nsew")
         irow = 0
         # About
         about = ttk.LabelFrame(center_frame, padding=(4, 0, 4, 4), text="About")
@@ -2356,42 +2397,6 @@ class HelpTab:
         ttk.Label(
             getstarted, text=_("gui", "help", "getting_started_text"), wraplength=self.WIDTH
         ).grid(sticky="nsew")
-
-        # Invalidate button
-        invalidate_frame = ttk.Frame(bottom_frame)
-        bottom_frame.columnconfigure(0, weight=1)  # center within the column
-        invalidate_frame.grid(column=0, row=0, sticky="nse")
-        ttk.Label(
-            invalidate_frame, text=_("gui", "help", "invalidate", "text")
-        ).grid(column=0, row=0)
-        self._invalidate_button: ttk.Button = ttk.Button(
-            invalidate_frame,
-            text=_("gui", "help", "invalidate", "button"),
-            command=self.invalidate_token,
-            state="disabled",
-        )
-        self._invalidate_button.grid(column=1, row=0)
-
-    def invalidate_token(self) -> None:
-        # sync to async bridge
-        asyncio.create_task(task_wrapper(self._invalidate_token)())
-
-    async def _invalidate_token(self) -> None:
-        auth_state = await self._twitch.get_auth()
-        async with self._twitch.request(
-            "POST",
-            "https://id.twitch.tv/oauth2/revoke",
-            data={
-                "client_id": self._twitch._client_type.CLIENT_ID,
-                "token": auth_state.access_token,
-            }
-        ) as response:
-            if response.status == 200:
-                auth_state.invalidate(delete_cookies=True)
-            else:
-                logger.error(f"Failed to invalidate the auth token: {response.status}")
-        self._twitch.change_state(State.RESTART)
-
 
 ##########################################
 # GUI DEFINITION END / GUI MANAGER START #

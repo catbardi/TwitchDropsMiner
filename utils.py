@@ -63,6 +63,29 @@ def chunk(to_chunk: abc.Iterable[_T], chunk_length: int) -> abc.Generator[list[_
         yield list_to_chunk[i:i + chunk_length]
 
 
+def autocomplete_matches(
+    choices: abc.Iterable[str], query: str, *, limit: int = 20
+) -> list[str]:
+    """Return case-insensitive matches, with prefix matches listed first."""
+    if limit <= 0:
+        return []
+    normalized = query.strip().casefold()
+    if not normalized:
+        return []
+    matches = [
+        choice
+        for choice in choices
+        if normalized in choice.casefold()
+    ]
+    matches.sort(
+        key=lambda choice: (
+            not choice.casefold().startswith(normalized),
+            choice.casefold(),
+        )
+    )
+    return matches[:limit]
+
+
 def format_traceback(exc: BaseException, **kwargs: Any) -> str:
     """
     Like `traceback.print_exc` but returns a string. Uses the passed-in exception.

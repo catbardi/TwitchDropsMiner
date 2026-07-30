@@ -37,6 +37,7 @@ from translate import _
 from cache import ImageCache
 from exceptions import MinerException, ExitRequest
 from utils import resource_path, set_root_icon, webopen, task_wrapper, Game, _T
+from utils import autocomplete_matches
 from constants import (
     MAX_INT,
     SELF_PATH,
@@ -189,8 +190,60 @@ class PlaceholderEntry(ttk.Entry):
         self.insert("end", content)
 
 
-class PlaceholderCombobox(PlaceholderEntry, ttk.Combobox):
-    pass
+class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
+    _IGNORED_KEYS = frozenset({"Up", "Down", "Return", "Escape", "Tab"})
+
+    def __init__(
+        self,
+        master: ttk.Widget,
+        *args: Any,
+        max_results: int = 20,
+        **kwargs: Any,
+    ) -> None:
+        self._completion_values: tuple[str, ...] = ()
+        self._max_results = max_results
+        super().__init__(master, *args, **kwargs)
+        self.bind("<KeyRelease>", self._autocomplete, add="+")
+
+    def set_completion_values(self, values: abc.Iterable[str]) -> None:
+        self._completion_values = tuple(values)
+        self._apply_completion_filter()
+
+    def _apply_completion_filter(self) -> list[str]:
+        query = self.get()
+        if query:
+            matches = autocomplete_matches(
+                self._completion_values,
+                query,
+                limit=self._max_results,
+            )
+        else:
+            matches = list(self._completion_values)
+        super().configure(values=matches)
+        return matches
+
+    def _autocomplete(self, event: tk.Event[AutocompleteCombobox]) -> None:
+        if self._ph or event.keysym in self._IGNORED_KEYS:
+            return
+        matches = self._apply_completion_filter()
+        if self.get() and matches:
+            self.after_idle(self._post_suggestions)
+        else:
+            self._unpost_suggestions()
+
+    def _post_suggestions(self) -> None:
+        if self.focus_get() is not self or not self.get():
+            return
+        try:
+            self.tk.call("ttk::combobox::Post", self._w)
+        except tk.TclError:
+            pass
+
+    def _unpost_suggestions(self) -> None:
+        try:
+            self.tk.call("ttk::combobox::Unpost", self._w)
+        except tk.TclError:
+            pass
 
 
 class PaddedListbox(tk.Listbox):
@@ -1749,7 +1802,7 @@ class SettingsPanel:
             center_frame, padding=(4, 0, 4, 4), text=_("gui", "settings", "priority")
         )
         priority_frame.grid(column=1, row=0, rowspan=2, sticky="nsew")
-        self._priority_entry = PlaceholderCombobox(
+        self._priority_entry = AutocompleteCombobox(
             priority_frame, placeholder=_("gui", "settings", "game_name"), width=30
         )
         self._priority_entry.grid(column=0, row=0, sticky="ew")
@@ -1811,7 +1864,7 @@ class SettingsPanel:
             center_frame, padding=(4, 0, 4, 4), text=_("gui", "settings", "exclude")
         )
         exclude_frame.grid(column=2, row=0, rowspan=2, sticky="nsew")
-        self._exclude_entry = PlaceholderCombobox(
+        self._exclude_entry = AutocompleteCombobox(
             exclude_frame, placeholder=_("gui", "settings", "game_name"), width=26
         )
         self._exclude_entry.grid(column=0, row=0, sticky="ew")
@@ -1958,13 +2011,13 @@ class SettingsPanel:
                 plist_file.unlink(missing_ok=True)
 
     def update_excluded_choices(self) -> None:
-        self._exclude_entry.config(
-            values=sorted(self._game_names.difference(self._settings.exclude))
+        self._exclude_entry.set_completion_values(
+            sorted(self._game_names.difference(self._settings.exclude))
         )
 
     def update_priority_choices(self) -> None:
-        self._priority_entry.config(
-            values=sorted(self._game_names.difference(self._settings.priority))
+        self._priority_entry.set_completion_values(
+            sorted(self._game_names.difference(self._settings.priority))
         )
 
     def set_games(self, games: set[Game]) -> None:

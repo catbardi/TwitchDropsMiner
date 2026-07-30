@@ -1,8 +1,8 @@
-# Twitch Drops Miner — сборка catbardi
+# Twitch Drops Miner 16.5 — сборка catbardi
 
 Русскоязычная пользовательская сборка Twitch Drops Miner с обновлённой локализацией и дополнительными исправлениями надёжности.
 
-[Скачать для Windows](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.Windows.zip) · [Все версии](https://github.com/catbardi/TwitchDropsMiner/releases/tag/dev-build) · [Исходный проект](https://github.com/DevilXD/TwitchDropsMiner)
+[Скачать для Windows](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.5/Twitch.Drops.Miner.Windows.zip) · [Все версии](https://github.com/catbardi/TwitchDropsMiner/releases/tag/v16.5) · [Исходный проект](https://github.com/DevilXD/TwitchDropsMiner)
 
 > [!IMPORTANT]
 > Это неофициальный форк проекта [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner). Автор оригинальной программы — [DevilXD](https://github.com/DevilXD). Сборка и дополнительные изменения поддерживаются пользователем [catbardi](https://github.com/catbardi).
@@ -24,12 +24,12 @@ Twitch Drops Miner автоматически получает временны�
 
 | Платформа | Файл |
 | --- | --- |
-| Windows | [Twitch.Drops.Miner.Windows.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.Windows.zip) |
-| Linux AppImage x86_64 | [Twitch.Drops.Miner.Linux.AppImage-x86_64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.Linux.AppImage-x86_64.zip) |
-| Linux AppImage ARM64 | [Twitch.Drops.Miner.Linux.AppImage-aarch64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.Linux.AppImage-aarch64.zip) |
-| macOS | [Twitch.Drops.Miner.MacOS.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.MacOS.zip) |
+| Windows | [Twitch.Drops.Miner.Windows.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.5/Twitch.Drops.Miner.Windows.zip) |
+| Linux AppImage x86_64 | [Twitch.Drops.Miner.Linux.AppImage-x86_64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.5/Twitch.Drops.Miner.Linux.AppImage-x86_64.zip) |
+| Linux AppImage ARM64 | [Twitch.Drops.Miner.Linux.AppImage-aarch64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.5/Twitch.Drops.Miner.Linux.AppImage-aarch64.zip) |
+| macOS | [Twitch.Drops.Miner.MacOS.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.5/Twitch.Drops.Miner.MacOS.zip) |
 
-Все варианты сборки находятся на [странице Development build](https://github.com/catbardi/TwitchDropsMiner/releases/tag/dev-build).
+Все варианты сборки находятся на [странице релиза 16.5](https://github.com/catbardi/TwitchDropsMiner/releases/tag/v16.5).
 
 ## Быстрый старт
 

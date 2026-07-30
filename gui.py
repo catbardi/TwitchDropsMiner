@@ -195,6 +195,7 @@ class PlaceholderEntry(ttk.Entry):
 
 class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
     _IGNORED_KEYS = frozenset({"Up", "Down", "Return", "Escape", "Tab"})
+    _EDIT_KEYS = frozenset({"BackSpace", "Delete", "Left", "Right", "Home", "End"})
 
     def __init__(
         self,
@@ -205,7 +206,12 @@ class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
     ) -> None:
         self._completion_values: tuple[str, ...] = ()
         self._max_results = max_results
+        self._popdown_listbox: str | None = None
         super().__init__(master, *args, **kwargs)
+        # A posted ttk combobox popup handles the next key as a listbox
+        # navigation/selection event on Windows. Close it before normal
+        # text input is processed and reopen it after the new query is ready.
+        self.bind("<KeyPress>", self._prepare_for_typing, add="+")
         self.bind("<KeyRelease>", self._autocomplete, add="+")
 
     def set_completion_values(self, values: abc.Iterable[str]) -> None:
@@ -234,11 +240,53 @@ class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
         else:
             self._unpost_suggestions()
 
+    def _prepare_for_typing(self, event: tk.Event[AutocompleteCombobox]) -> None:
+        """Keep ordinary typing in the entry while suggestions are visible."""
+        if event.keysym not in self._IGNORED_KEYS:
+            self._unpost_suggestions()
+
+    def _bind_popdown_input(self) -> None:
+        try:
+            popdown = str(self.tk.call("ttk::combobox::PopdownWindow", self._w))
+            listbox = f"{popdown}.f.l"
+            if listbox == self._popdown_listbox:
+                return
+            self._root()._bind(
+                ("bind", listbox), "<KeyPress>", self._popdown_keypress, "+"
+            )
+            self._popdown_listbox = listbox
+        except tk.TclError:
+            pass
+
+    def _popdown_keypress(self, event: tk.Event[AutocompleteCombobox]) -> str | None:
+        if event.keysym in self._IGNORED_KEYS:
+            return
+        if not event.char and event.keysym not in self._EDIT_KEYS:
+            return
+        self._unpost_suggestions()
+        self.focus_set()
+        self.event_generate("<KeyPress>", keysym=event.keysym)
+        self._autocomplete(event)
+        return "break"
+
     def _post_suggestions(self) -> None:
         if self.focus_get() is not self or not self.get():
             return
         try:
             self.tk.call("ttk::combobox::Post", self._w)
+            self._bind_popdown_input()
+            # ttk::combobox::Post gives the popup a grab and moves focus to
+            # its listbox. Release both so the next character is still
+            # delivered to the entry while the suggestions stay visible.
+            self.after(20, self._release_suggestions_capture)
+        except tk.TclError:
+            pass
+
+    def _release_suggestions_capture(self) -> None:
+        try:
+            popdown = self.tk.call("ttk::combobox::PopdownWindow", self._w)
+            self.tk.call("grab", "release", popdown)
+            self.tk.call("focus", self._w)
         except tk.TclError:
             pass
 

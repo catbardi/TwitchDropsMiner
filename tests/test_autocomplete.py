@@ -22,9 +22,12 @@ class AutocompleteMatchesTests(unittest.TestCase):
         self.assertEqual(matches[:2], ["Warface", "Warframe"])
         self.assertIn("Call of Duty: Warzone", matches[2:])
 
-    def test_does_not_match_inside_a_word(self) -> None:
+    def test_contains_matches_are_kept_after_prefix_matches(self) -> None:
         choices = {"Star Wars: The Old Republic", "PUBG: BATTLEGROUNDS"}
-        self.assertEqual(autocomplete_matches(choices, "pub"), ["PUBG: BATTLEGROUNDS"])
+        self.assertEqual(
+            autocomplete_matches(choices, "pub"),
+            ["PUBG: BATTLEGROUNDS", "Star Wars: The Old Republic"],
+        )
 
     def test_whitespace_is_ignored(self) -> None:
         self.assertEqual(autocomplete_matches(self.GAMES, "  warframe  "), ["Warframe"])

@@ -201,11 +201,13 @@ class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
         self,
         master: ttk.Widget,
         *args: Any,
+        search_callback: abc.Callable[[str], None] | None = None,
         max_results: int = 20,
         **kwargs: Any,
     ) -> None:
         self._completion_values: tuple[str, ...] = ()
         self._max_results = max_results
+        self._search_callback = search_callback
         self._popdown_listbox: str | None = None
         super().__init__(master, *args, **kwargs)
         # A posted ttk combobox popup handles the next key as a listbox
@@ -235,6 +237,8 @@ class AutocompleteCombobox(PlaceholderEntry, ttk.Combobox):
         if self._ph or event.keysym in self._IGNORED_KEYS:
             return
         matches = self._apply_completion_filter()
+        if self._search_callback is not None:
+            self._search_callback(self.get())
         if self.get() and matches:
             self.after_idle(self._post_suggestions)
         else:
@@ -1725,6 +1729,9 @@ class SettingsPanel:
             ),
         }
         self._game_names: set[str] = set()
+        self._search_after_ids: dict[str, str | None] = {"priority": None, "exclude": None}
+        self._search_tasks: dict[str, asyncio.Task[None] | None] = {"priority": None, "exclude": None}
+        self._search_generation: dict[str, int] = {"priority": 0, "exclude": 0}
         master.rowconfigure(0, weight=1)
         master.columnconfigure(0, weight=1)
         # use a frame to center the content within the tab
@@ -1867,7 +1874,8 @@ class SettingsPanel:
         )
         priority_frame.grid(column=1, row=0, rowspan=2, sticky="nsew")
         self._priority_entry = AutocompleteCombobox(
-            priority_frame, placeholder=_("gui", "settings", "game_name"), width=30
+            priority_frame, placeholder=_("gui", "settings", "game_name"), width=30,
+            search_callback=lambda query: self._schedule_game_search("priority", query)
         )
         self._priority_entry.grid(column=0, row=0, sticky="ew")
         priority_frame.columnconfigure(0, weight=1)
@@ -1929,7 +1937,8 @@ class SettingsPanel:
         )
         exclude_frame.grid(column=2, row=0, rowspan=2, sticky="nsew")
         self._exclude_entry = AutocompleteCombobox(
-            exclude_frame, placeholder=_("gui", "settings", "game_name"), width=26
+            exclude_frame, placeholder=_("gui", "settings", "game_name"), width=26,
+            search_callback=lambda query: self._schedule_game_search("exclude", query)
         )
         self._exclude_entry.grid(column=0, row=0, sticky="ew")
         ttk.Button(
@@ -2074,15 +2083,66 @@ class SettingsPanel:
             else:
                 plist_file.unlink(missing_ok=True)
 
-    def update_excluded_choices(self) -> None:
-        self._exclude_entry.set_completion_values(
-            sorted(self._game_names.difference(self._settings.exclude))
+    def _game_entry(self, field: str) -> AutocompleteCombobox:
+        if field == "priority":
+            return self._priority_entry
+        return self._exclude_entry
+
+    def _local_game_choices(self, field: str) -> list[str]:
+        blocked = self._settings.priority if field == "priority" else self._settings.exclude
+        return sorted(self._game_names.difference(blocked))
+
+    def _schedule_game_search(self, field: str, query: str) -> None:
+        entry = self._game_entry(field)
+        after_id = self._search_after_ids[field]
+        if after_id is not None:
+            try:
+                entry.after_cancel(after_id)
+            except tk.TclError:
+                pass
+            self._search_after_ids[field] = None
+        task = self._search_tasks[field]
+        if task is not None and not task.done():
+            task.cancel()
+        self._search_generation[field] += 1
+        generation = self._search_generation[field]
+        query = query.strip()
+        if not query:
+            entry.set_completion_values(self._local_game_choices(field))
+            return
+        self._search_after_ids[field] = entry.after(
+            250,
+            lambda: self._start_game_search(field, query, generation),
         )
 
-    def update_priority_choices(self) -> None:
-        self._priority_entry.set_completion_values(
-            sorted(self._game_names.difference(self._settings.priority))
+    def _start_game_search(self, field: str, query: str, generation: int) -> None:
+        self._search_after_ids[field] = None
+        self._search_tasks[field] = asyncio.create_task(
+            self._fetch_game_choices(field, query, generation)
         )
+
+    async def _fetch_game_choices(self, field: str, query: str, generation: int) -> None:
+        try:
+            games = await self._manager._twitch.search_games(query)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.debug("Game catalog search failed", exc_info=True)
+            return
+        if generation != self._search_generation[field]:
+            return
+        entry = self._game_entry(field)
+        blocked = self._settings.priority if field == "priority" else self._settings.exclude
+        choices = sorted(game.name for game in games if game.name not in blocked)
+        entry.set_completion_values(choices)
+        if not choices:
+            entry._unpost_suggestions()
+
+    def update_excluded_choices(self) -> None:
+        self._exclude_entry.set_completion_values(self._local_game_choices("exclude"))
+
+    def update_priority_choices(self) -> None:
+        self._priority_entry.set_completion_values(self._local_game_choices("priority"))
 
     def set_games(self, games: set[Game]) -> None:
         self._game_names.update(game.name for game in games)

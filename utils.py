@@ -66,24 +66,24 @@ def chunk(to_chunk: abc.Iterable[_T], chunk_length: int) -> abc.Generator[list[_
 def autocomplete_matches(
     choices: abc.Iterable[str], query: str, *, limit: int = 20
 ) -> list[str]:
-    """Return case-insensitive matches, with prefix matches listed first."""
+    """Return matches for a name prefix or the start of a word in the name."""
     if limit <= 0:
         return []
     normalized = query.strip().casefold()
     if not normalized:
         return []
-    matches = [
-        choice
-        for choice in choices
-        if normalized in choice.casefold()
-    ]
-    matches.sort(
-        key=lambda choice: (
-            not choice.casefold().startswith(normalized),
-            choice.casefold(),
-        )
-    )
-    return matches[:limit]
+    matches: list[tuple[int, str]] = []
+    for choice in choices:
+        folded_choice = choice.casefold()
+        if folded_choice.startswith(normalized):
+            rank = 0
+        elif any(word.startswith(normalized) for word in re.findall(r"\w+", folded_choice)):
+            rank = 1
+        else:
+            continue
+        matches.append((rank, choice))
+    matches.sort(key=lambda item: (item[0], item[1].casefold()))
+    return [choice for _, choice in matches[:limit]]
 
 
 def format_traceback(exc: BaseException, **kwargs: Any) -> str:

@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 ImageHash = NewType("ImageHash", str)
 ImageSize: TypeAlias = "tuple[int, int]"
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_IMAGE_PIXELS = 40_000_000
 
 
 class ExpiringHash(TypedDict):
@@ -111,7 +113,22 @@ class ImageCache:
                 try:
                     async with self._twitch.request("GET", url) as response:
                         if response.status != 404:
-                            image = Image_module.open(io.BytesIO(await response.read()))
+                            if (
+                                response.content_length is not None
+                                and response.content_length > MAX_IMAGE_BYTES
+                            ):
+                                raise ValueError("Image response is too large")
+                            raw_image = await response.content.read(MAX_IMAGE_BYTES + 1)
+                            if len(raw_image) > MAX_IMAGE_BYTES:
+                                raise ValueError("Image response is too large")
+                            with Image_module.open(io.BytesIO(raw_image)) as loaded:
+                                width, height = loaded.size
+                                if width <= 0 or height <= 0:
+                                    raise ValueError("Image has invalid dimensions")
+                                if width * height > MAX_IMAGE_PIXELS:
+                                    raise ValueError("Image has too many pixels")
+                                loaded.load()
+                                image = loaded.copy()
                 except Exception:
                     pass
                 if image is None:

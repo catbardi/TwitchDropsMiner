@@ -37,6 +37,86 @@ _P = ParamSpec("_P")  # params
 _JSON_T = TypeVar("_JSON_T", bound=Mapping[Any, Any])
 logger = logging.getLogger("TwitchDrops")
 
+REDACTED = "<redacted>"
+SENSITIVE_LOG_KEYS = frozenset(
+    {
+        "authorization",
+        "auth_token",
+        "captcha",
+        "captcha_proof",
+        "device_code",
+        "password",
+        "proxy",
+        "refresh_token",
+        "token",
+        "user_code",
+    }
+)
+SENSITIVE_QUERY_PARTS = ("auth", "code", "password", "secret", "sig", "token")
+
+
+def redact_url(url: URL | str) -> str:
+    """Return a URL with credential-like query parameters removed."""
+    try:
+        parsed = URL(str(url))
+    except (TypeError, ValueError):
+        return REDACTED
+    if not parsed.query:
+        return str(parsed)
+    query = {
+        key: REDACTED
+        if any(part in key.casefold() for part in SENSITIVE_QUERY_PARTS)
+        else value
+        for key, value in parsed.query.items()
+    }
+    return str(parsed.with_query(query))
+
+
+def redact_sensitive_data(value: Any, *, key: str | None = None) -> Any:
+    """Recursively redact credentials before a value is written to a log."""
+    normalized_key = key.casefold().replace("-", "_") if key is not None else None
+    if normalized_key in SENSITIVE_LOG_KEYS:
+        return REDACTED
+    if isinstance(value, URL):
+        return redact_url(value)
+    if isinstance(value, abc.Mapping):
+        return {
+            item_key: redact_sensitive_data(item_value, key=str(item_key))
+            for item_key, item_value in value.items()
+        }
+    if isinstance(value, (list, tuple, set)):
+        return [redact_sensitive_data(item) for item in value]
+    if normalized_key in {"url", "uri"} and isinstance(value, str):
+        return redact_url(value)
+    return value
+
+
+def is_trusted_twitch_url(url: URL | str) -> bool:
+    """Allow only HTTPS endpoints owned by Twitch and its delivery domains."""
+    try:
+        parsed = URL(str(url))
+    except (TypeError, ValueError):
+        return False
+    host = parsed.host
+    if parsed.scheme != "https" or host is None:
+        return False
+    return (
+        host == "twitch.tv"
+        or host.endswith(".twitch.tv")
+        or host.endswith(".ttvnw.net")
+        or host.endswith(".jtvnw.net")
+    )
+
+
+def restrict_file_permissions(path: Path) -> None:
+    """Restrict sensitive files on POSIX systems; Windows uses folder ACLs."""
+    if os.name != "posix":
+        return
+    try:
+        path.chmod(0o600)
+    except OSError:
+        logger.warning("Unable to restrict permissions for %s", path)
+
 
 def set_root_icon(root: tk.Tk, image_path: Path | str) -> None:
     with Image_module.open(image_path) as image:

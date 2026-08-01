@@ -40,6 +40,10 @@ from utils import (
     AwaitableValue,
     Game,
     ExponentialBackoff,
+    is_trusted_twitch_url,
+    redact_sensitive_data,
+    redact_url,
+    restrict_file_permissions,
 )
 from constants import (
     CALL,
@@ -310,7 +314,7 @@ class _AuthState:
                     #     "error_description":"client blocked from this operation"
                     # }
                     gui_print(_("login", "error_code").format(error_code=error_code))
-                    logger.info(str(login_response))
+                    logger.info("Login response: %s", redact_sensitive_data(login_response))
                     use_chrome = True
                     break
                 else:
@@ -427,6 +431,7 @@ class _AuthState:
             # update our cookie and save it
             jar.update_cookies(cookie, client_info.CLIENT_URL)
             jar.save(COOKIES_PATH)
+            restrict_file_permissions(COOKIES_PATH)
         self._twitch.gui.login._logout_button.config(state="normal")
         self._logged_in.set()
 
@@ -516,6 +521,7 @@ class Twitch:
                 if not cookie:
                     del cookie_jar._cookies[cookie_key]
             cookie_jar.save(COOKIES_PATH)
+            restrict_file_permissions(COOKIES_PATH)
             await self._session.close()
             self._session = None
         self._drops.clear()
@@ -1241,11 +1247,18 @@ class Twitch:
     async def request(
         self, method: str, url: URL | str, *, invalidate_after: datetime | None = None, **kwargs
     ) -> abc.AsyncIterator[aiohttp.ClientResponse]:
+        if not is_trusted_twitch_url(url):
+            raise RequestException(f"Blocked request to untrusted URL: {redact_url(url)}")
         session = await self.get_session()
         method = method.upper()
         if self.settings.proxy and "proxy" not in kwargs:
             kwargs["proxy"] = self.settings.proxy
-        logger.debug(f"Request: ({method=}, {url=}, {kwargs=})")
+        logger.debug(
+            "Request: (method=%s, url=%s, kwargs=%s)",
+            method,
+            redact_url(url),
+            redact_sensitive_data(kwargs),
+        )
         session_timeout = timedelta(seconds=session.timeout.total or 0)
         backoff = ExponentialBackoff(maximum=3*60)
         for delay in backoff:
@@ -1299,7 +1312,7 @@ class Twitch:
     async def gql_request(
         self, ops: GQLOperation | list[GQLOperation]
     ) -> JsonType | list[JsonType]:
-        gql_logger.debug(f"GQL Request: {ops}")
+        gql_logger.debug("GQL Request: %s", redact_sensitive_data(ops))
         backoff = ExponentialBackoff(maximum=60)
         # Use a flag to retry the request a single time, if a specific set of errors is encountered
         single_retry: bool = True
@@ -1313,7 +1326,7 @@ class Twitch:
                     headers=auth_state.headers(user_agent=self._client_type.USER_AGENT, gql=True),
                 ) as response:
                     response_json: JsonType | list[JsonType] = await response.json()
-            gql_logger.debug(f"GQL Response: {response_json}")
+            gql_logger.debug("GQL Response: %s", redact_sensitive_data(response_json))
             orig_response = response_json
             if isinstance(response_json, list):
                 response_list = response_json

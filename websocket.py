@@ -21,6 +21,7 @@ from utils import (
     format_traceback,
     AwaitableValue,
     ExponentialBackoff,
+    redact_sensitive_data,
 )
 
 if TYPE_CHECKING:
@@ -330,7 +331,9 @@ class Websocket:
             await ws.send_json(message, dumps=json_minify)
         except aiohttp.ClientConnectionError:
             raise WebsocketClosed(received=False)
-        ws_logger.debug(f"Websocket[{self._idx}] sent: {message}")
+        ws_logger.debug(
+            "Websocket[%s] sent: %s", self._idx, redact_sensitive_data(message)
+        )
 
 
 class WebsocketPool:

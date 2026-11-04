@@ -1,17 +1,24 @@
-# Twitch Drops Miner — сборка catbardi
+# Twitch Drops Miner — catbardi UI
 
-Русскоязычная пользовательская сборка Twitch Drops Miner с обновлённой локализацией, удобствами в инвентаре и защитой от устаревания GQL API Twitch.
+Ветка [`fork/custom-ui-quiet-journal`](https://github.com/catbardi/TwitchDropsMiner/tree/fork/custom-ui-quiet-journal) — отдельная версия сборки [catbardi](https://github.com/catbardi): новый интерфейс и дополнительные удобства. Она **не сливается** со стабильной линией `master` / релизами `v16.x`.
 
-[Скачать стабильную Windows v16.6](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.6/Twitch.Drops.Miner.Windows.zip) · [Все стабильные релизы](https://github.com/catbardi/TwitchDropsMiner/releases) · [Development build](https://github.com/catbardi/TwitchDropsMiner/releases/tag/dev-build) · [Исходный проект](https://github.com/DevilXD/TwitchDropsMiner)
+[Эта ветка на GitHub](https://github.com/catbardi/TwitchDropsMiner/tree/fork/custom-ui-quiet-journal) · [Стабильный master](https://github.com/catbardi/TwitchDropsMiner/tree/master) · [Релизы v16.x](https://github.com/catbardi/TwitchDropsMiner/releases) · [Исходный проект](https://github.com/DevilXD/TwitchDropsMiner)
 
 > [!IMPORTANT]
-> Это неофициальный форк проекта [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner). Автор оригинальной программы — [DevilXD](https://github.com/DevilXD). Сборка и дополнительные изменения поддерживаются пользователем [catbardi](https://github.com/catbardi).
+> Это неофициальный форк [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner). Оригинал — [DevilXD](https://github.com/DevilXD). Стабильные zip-релизы по-прежнему с `master`. Эта страница описывает **кастомную UI-линейку**.
+
+## Чем эта версия отличается
+
+- Новый визуальный дизайн (тема, вкладки, карточки инвентаря).
+- Тёмный / светлый режим без «мигания» при переключении.
+- В журнале GUI — только критические ошибки; полный DEBUG-лог всегда пишется в `log.txt` в фоне.
+- Всё из стабильной сборки catbardi: русский язык, автодополнение игр, «Все активные кампании», горячие GQL-патчи и прочее.
 
 ## Что это за программа
 
 Twitch Drops Miner автоматически получает временные Twitch Drops без загрузки видео и звука. Программа выбирает подходящие трансляции, переключается между каналами, следит за прогрессом кампаний и забирает готовые награды.
 
-## Что добавлено в этой сборке
+## База стабильной сборки catbardi
 
 - Полная и отредактированная русская локализация.
 - Автодополнение названий игр в списках приоритета и исключений.
@@ -27,14 +34,15 @@ Twitch Drops Miner автоматически получает временны�
 
 Подробности по версиям — в [CHANGELOG.md](CHANGELOG.md).
 
-## Стабильные релизы и Development build
+## Каналы сборки
 
 | Канал | Когда брать |
 | --- | --- |
-| **Стабильный** (`v16.6` и новее) | Обычное использование. Проверенный набор изменений. |
-| **Development build** (`dev-build`) | Самый свежий `master`. Может быть нестабилен. |
+| **Эта ветка** (`fork/custom-ui-quiet-journal`) | Новый дизайн и плюшки ниже. Собирайте из исходников этой ветки. |
+| **Стабильный** (`v16.6` и новее, ветка `master`) | Обычные zip-релизы без нового UI. |
+| **Development build** (`dev-build`) | Ночной `master`. Может быть нестабилен. |
 
-Рекомендуется ставить стабильный релиз. `dev-build` — для проверки новинок.
+Стабильный zip и эта UI-ветка — **разные линии**, их не смешивают.
 
 ## Скачать
 

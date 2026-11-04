@@ -1,8 +1,8 @@
 # Twitch Drops Miner — сборка catbardi
 
-Русскоязычная пользовательская сборка Twitch Drops Miner с обновлённой локализацией и дополнительными исправлениями надёжности.
+Русскоязычная пользовательская сборка Twitch Drops Miner с обновлённой локализацией, удобствами в инвентаре и защитой от устаревания GQL API Twitch.
 
-[Скачать для Windows](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.Windows.zip) · [Все версии](https://github.com/catbardi/TwitchDropsMiner/releases/tag/dev-build) · [Исходный проект](https://github.com/DevilXD/TwitchDropsMiner)
+[Скачать стабильную Windows v16.6](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.6/Twitch.Drops.Miner.Windows.zip) · [Все стабильные релизы](https://github.com/catbardi/TwitchDropsMiner/releases) · [Development build](https://github.com/catbardi/TwitchDropsMiner/releases/tag/dev-build) · [Исходный проект](https://github.com/DevilXD/TwitchDropsMiner)
 
 > [!IMPORTANT]
 > Это неофициальный форк проекта [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner). Автор оригинальной программы — [DevilXD](https://github.com/DevilXD). Сборка и дополнительные изменения поддерживаются пользователем [catbardi](https://github.com/catbardi).
@@ -14,13 +14,40 @@ Twitch Drops Miner автоматически получает временны�
 ## Что добавлено в этой сборке
 
 - Полная и отредактированная русская локализация.
+- Автодополнение названий игр в списках приоритета и исключений.
+- Вкладка **Инвентарь → Все активные кампании** — список текущих кампаний Twitch без фильтров.
+- Горячие патчи GQL-хэшей через [`gql_overrides.json`](gql_overrides.json): при смене API Twitch часто не нужна пересборка exe.
+- Понятные сообщения, если запрос Twitch API устарел (`PersistedQueryNotFound`).
+- CI-проверка актуальности GQL-хэшей.
 - Исправлено устаревание времени в событиях просмотра.
 - Автоматическое обновление недействительного адреса Spade.
 - Более безопасное сохранение настроек и кэша.
 - Восстановление данных из временной или резервной копии при повреждении JSON.
 - Автоматические тесты для ключевых исправлений.
 
+Подробности по версиям — в [CHANGELOG.md](CHANGELOG.md).
+
+## Стабильные релизы и Development build
+
+| Канал | Когда брать |
+| --- | --- |
+| **Стабильный** (`v16.6` и новее) | Обычное использование. Проверенный набор изменений. |
+| **Development build** (`dev-build`) | Самый свежий `master`. Может быть нестабилен. |
+
+Рекомендуется ставить стабильный релиз. `dev-build` — для проверки новинок.
+
 ## Скачать
+
+### Стабильный v16.6
+
+| Платформа | Файл |
+| --- | --- |
+| Windows | [Twitch.Drops.Miner.Windows.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.6/Twitch.Drops.Miner.Windows.zip) |
+| Linux AppImage x86_64 | [Twitch.Drops.Miner.Linux.AppImage-x86_64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.6/Twitch.Drops.Miner.Linux.AppImage-x86_64.zip) |
+| Linux AppImage ARM64 | [Twitch.Drops.Miner.Linux.AppImage-aarch64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.6/Twitch.Drops.Miner.Linux.AppImage-aarch64.zip) |
+| macOS | [Twitch.Drops.Miner.MacOS.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/v16.6/Twitch.Drops.Miner.MacOS.zip) |
+
+### Development build (ночной)
 
 | Платформа | Файл |
 | --- | --- |
@@ -29,17 +56,16 @@ Twitch Drops Miner автоматически получает временны�
 | Linux AppImage ARM64 | [Twitch.Drops.Miner.Linux.AppImage-aarch64.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.Linux.AppImage-aarch64.zip) |
 | macOS | [Twitch.Drops.Miner.MacOS.zip](https://github.com/catbardi/TwitchDropsMiner/releases/download/dev-build/Twitch.Drops.Miner.MacOS.zip) |
 
-Все варианты сборки находятся на [странице Development build](https://github.com/catbardi/TwitchDropsMiner/releases/tag/dev-build).
-
 ## Быстрый старт
 
-1. Скачайте архив для своей операционной системы.
+1. Скачайте архив для своей операционной системы (лучше стабильный `v16.6`).
 2. Распакуйте его в отдельную папку.
 3. Запустите Twitch Drops Miner.
 4. Войдите в аккаунт Twitch через встроенное окно авторизации.
 5. Откройте настройки и выберите `Русский` в поле `Language`.
-6. Добавьте нужные игры в список приоритетов и нажмите «Перезагрузить».
-7. Проверьте [страницу кампаний Twitch](https://www.twitch.tv/drops/campaigns) и привяжите необходимые игровые аккаунты.
+6. Добавьте нужные игры в список приоритетов (есть автодополнение) и нажмите «Перезагрузить».
+7. При желании откройте **Инвентарь → Все активные кампании**, чтобы увидеть все текущие кампании Twitch.
+8. Проверьте [страницу кампаний Twitch](https://www.twitch.tv/drops/campaigns) и привяжите необходимые игровые аккаунты.
 
 ## Возможности
 
@@ -92,6 +118,8 @@ Twitch Drops Miner автоматически получает временны�
 - папку `cache`.
 
 Распакуйте новую версию в отдельную папку и перенесите сохранённые файлы при необходимости.
+
+Если Twitch сменил GQL API, часто достаточно дождаться обновления [`gql_overrides.json`](https://raw.githubusercontent.com/catbardi/TwitchDropsMiner/master/gql_overrides.json) на `master` (приложение подтягивает патч само) или скачать новый релиз. Полная пересборка нужна не всегда.
 
 ## Обратная связь
 

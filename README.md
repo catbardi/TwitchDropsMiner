@@ -7,6 +7,9 @@
 > [!IMPORTANT]
 > Это неофициальный форк проекта [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner). Автор оригинальной программы — [DevilXD](https://github.com/DevilXD). Сборка и дополнительные изменения поддерживаются пользователем [catbardi](https://github.com/catbardi).
 
+> [!NOTE]
+> Отдельная линейка с **новым дизайном** и дополнительными плюшками (тихий журнал, полный лог в `log.txt` и др.) живёт в ветке [`fork/custom-ui-quiet-journal`](https://github.com/catbardi/TwitchDropsMiner/tree/fork/custom-ui-quiet-journal). Она **не сливается** с `master` и со стабильными релизами `v16.x` — это другая версия той же сборки.
+
 ## Что это за программа
 
 Twitch Drops Miner автоматически получает временные Twitch Drops без загрузки видео и звука. Программа выбирает подходящие трансляции, переключается между каналами, следит за прогрессом кампаний и забирает готовые награды.

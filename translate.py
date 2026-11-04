@@ -44,6 +44,7 @@ class ErrorMessages(TypedDict):
     captcha: str
     no_connection: str
     site_down: str
+    gql_persisted_query: str
 
 
 class GUIStatus(TypedDict):
@@ -57,6 +58,8 @@ class GUIStatus(TypedDict):
     fetching_inventory: str
     fetching_campaigns: str
     adding_campaigns: str
+    checking_api: str
+    gql_outdated: str
 
 
 class GUITabs(TypedDict):
@@ -146,9 +149,16 @@ class GUIInvStatus(TypedDict):
     ready_to_claim: str
 
 
+class GUIInvTabs(TypedDict):
+    filtered: str
+    all_active: str
+
+
 class GUIInventory(TypedDict):
+    tabs: GUIInvTabs
     filter: GUIInvFilter
     status: GUIInvStatus
+    active_summary: str
     starts: str
     ends: str
     allowed_channels: str
@@ -197,6 +207,8 @@ class GUIHelpLinks(TypedDict):
     name: str
     inventory: str
     campaigns: str
+    releases: str
+    gql_overrides: str
 
 
 class GUIHelpInvalidate(TypedDict):
@@ -277,6 +289,10 @@ default_translation: Translation = {
         "captcha": "Your login attempt was denied by CAPTCHA.\nPlease try again in 12+ hours.",
         "site_down": "Twitch is down, retrying in {seconds} seconds...",
         "no_connection": "Cannot connect to Twitch, retrying in {seconds} seconds... ({url})",
+        "gql_persisted_query": (
+            "Twitch API query '{operation}' is outdated (PersistedQueryNotFound).\n"
+            "Update the app from Releases, or wait for a hash patch at:\n{url}"
+        ),
     },
     "gui": {
         "output": "Output",
@@ -291,6 +307,8 @@ default_translation: Translation = {
             "fetching_inventory": "Fetching inventory...",
             "fetching_campaigns": "Fetching campaigns...",
             "adding_campaigns": "Adding campaigns to inventory... {counter}",
+            "checking_api": "Checking API updates...",
+            "gql_outdated": "Outdated Twitch API query: {operation}",
         },
         "tabs": {
             "main": "Main",
@@ -351,6 +369,10 @@ default_translation: Translation = {
             },
         },
         "inventory": {
+            "tabs": {
+                "filtered": "Filtered",
+                "all_active": "All active campaigns",
+            },
             "filter": {
                 "name": "Filter",
                 "show": "Show:",
@@ -370,6 +392,7 @@ default_translation: Translation = {
                 "claimed": "Claimed ✔",
                 "ready_to_claim": "Ready to claim ⏳",
             },
+            "active_summary": "Currently active Twitch campaigns: {count}",
             "starts": "Starts: {time}",
             "ends": "Ends: {time}",
             "allowed_channels": "Allowed Channels:",
@@ -415,6 +438,8 @@ default_translation: Translation = {
                 "name": "Useful Links",
                 "inventory": "See Twitch inventory",
                 "campaigns": "See all campaigns and manage account links",
+                "releases": "Download the latest catbardi build",
+                "gql_overrides": "GQL hash overrides (hot patch)",
             },
             "how_it_works": "How It Works",
             "how_it_works_text": (

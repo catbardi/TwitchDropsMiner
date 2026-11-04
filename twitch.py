@@ -60,6 +60,16 @@ from constants import (
     PriorityMode,
     WebsocketTopic,
 )
+from gql_overrides import (
+    GQL_OVERRIDES_URL,
+    apply_overrides,
+    fetch_remote_overrides,
+    load_cached_or_bundled,
+    operation_name_from_ops,
+    save_cache,
+    should_fetch_remote,
+    sync_ops_hashes,
+)
 
 if TYPE_CHECKING:
     from utils import Game
@@ -689,6 +699,33 @@ class Twitch:
             except aiohttp.ContentTypeError as exc:
                 raise RequestException(_("login", "unexpected_content")) from exc
 
+    async def apply_gql_overrides(self, *, force: bool = False) -> list[str]:
+        """
+        Load GQL hash / UA overrides from cache or GitHub and apply them in-memory.
+        Safe to call repeatedly; network fetch is skipped while the cache is fresh.
+        """
+        applied: list[str] = []
+        # Always start from cache/bundled so a cold start still gets last-known patches
+        local = load_cached_or_bundled()
+        if local is not None:
+            applied = apply_overrides(local)
+
+        if should_fetch_remote(force=force):
+            try:
+                session = await self.get_session()
+                remote = await fetch_remote_overrides(session)
+            except Exception:
+                logger.warning("Unable to refresh GQL overrides from GitHub", exc_info=True)
+                remote = None
+            if remote is not None:
+                save_cache(remote)
+                applied = apply_overrides(remote)
+                if applied:
+                    logger.info("Applied GQL overrides for: %s", ", ".join(applied))
+                else:
+                    logger.debug("GQL overrides fetched; no hash changes needed")
+        return applied
+
     async def _run(self):
         """
         Main method that runs the whole client.
@@ -699,6 +736,8 @@ class Twitch:
         • Changing the stream that's being watched if necessary
         """
         self.gui.start()
+        self.gui.status.update(_("gui", "status", "checking_api"))
+        await self.apply_gql_overrides()
         auth_state = await self.get_auth()
         await self.websocket.start()
         # NOTE: watch task is explicitly restarted on each new run
@@ -1393,6 +1432,7 @@ class Twitch:
         backoff = ExponentialBackoff(maximum=60)
         # Use a flag to retry the request a single time, if a specific set of errors is encountered
         single_retry: bool = True
+        overrides_refreshed: bool = False
         for delay in backoff:
             async with self._qgl_limiter:
                 auth_state = await self.get_auth()
@@ -1415,12 +1455,41 @@ class Twitch:
                 if "errors" in response_json:
                     for error_dict in response_json["errors"]:
                         if "message" in error_dict:
-                            if (
-                                single_retry
-                                and error_dict["message"] in (
-                                    "service error",
-                                    "PersistedQueryNotFound",
+                            if error_dict["message"] == "PersistedQueryNotFound":
+                                op_name = (
+                                    response_json.get("extensions", {}).get("operationName")
+                                    or operation_name_from_ops(ops)
                                 )
+                                if single_retry:
+                                    logger.error(
+                                        "Retrying PersistedQueryNotFound for %s "
+                                        "(refreshing GQL overrides)",
+                                        op_name,
+                                    )
+                                    single_retry = False
+                                    if not overrides_refreshed:
+                                        await self.apply_gql_overrides(force=True)
+                                        sync_ops_hashes(ops)
+                                        overrides_refreshed = True
+                                    if delay < 5:
+                                        delay = 5
+                                    force_retry = True
+                                    break
+                                # Already retried — surface a clear, actionable error
+                                message = _("error", "gql_persisted_query").format(
+                                    operation=op_name,
+                                    url=GQL_OVERRIDES_URL,
+                                )
+                                self.print(message)
+                                self.gui.status.update(
+                                    _("gui", "status", "gql_outdated").format(
+                                        operation=op_name
+                                    )
+                                )
+                                raise GQLException(message)
+                            elif (
+                                single_retry
+                                and error_dict["message"] == "service error"
                             ):
                                 logger.error(
                                     f"Retrying a {error_dict['message']} for "

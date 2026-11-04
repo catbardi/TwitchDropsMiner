@@ -1398,6 +1398,10 @@ class CampaignDisplay(TypedDict):
 
 
 class InventoryOverview:
+    # Nested view modes inside the Inventory page
+    VIEW_FILTERED = 0
+    VIEW_ALL_ACTIVE = 1
+
     def __init__(self, manager: GUIManager, master: ttk.Widget):
         self._manager = manager
         self._cache: ImageCache = manager._cache
@@ -1412,86 +1416,130 @@ class InventoryOverview:
             "finished": IntVar(master, 0),
         }
         manager.tabs.add_view_event(self._on_tab_switched)
-        # Filtering options
-        filter_frame = ttk.LabelFrame(
-            master, text=_("gui", "inventory", "filter", "name"), padding=(4, 0, 4, 4)
+
+        # Nested tabs: filtered inventory / all currently active Twitch campaigns
+        self._views = ttk.Notebook(master)
+        self._views.grid(column=0, row=0, columnspan=2, sticky="nsew")
+        master.rowconfigure(0, weight=1)
+        master.columnconfigure(0, weight=1)
+
+        filtered_page = ttk.Frame(self._views, padding=(0, 4, 0, 0))
+        active_page = ttk.Frame(self._views, padding=(0, 4, 0, 0))
+        self._views.add(filtered_page, text=_("gui", "inventory", "tabs", "filtered"))
+        self._views.add(active_page, text=_("gui", "inventory", "tabs", "all_active"))
+        self._views.bind("<<NotebookTabChanged>>", self._on_view_switched, True)
+
+        # Filtering options (filtered view)
+        self._filter_frame = ttk.LabelFrame(
+            filtered_page, text=_("gui", "inventory", "filter", "name"), padding=(4, 0, 4, 4)
         )
         LABEL_SPACING = 20
-        filter_frame.grid(column=0, row=0, columnspan=2, sticky="nsew")
+        self._filter_frame.grid(column=0, row=0, columnspan=2, sticky="nsew")
         ttk.Label(
-            filter_frame, text=_("gui", "inventory", "filter", "show"), padding=(0, 0, 10, 0)
+            self._filter_frame, text=_("gui", "inventory", "filter", "show"), padding=(0, 0, 10, 0)
         ).grid(column=0, row=0)
         icolumn = 0
         ttk.Checkbutton(
-            filter_frame, variable=self._filters["not_linked"]
+            self._filter_frame, variable=self._filters["not_linked"]
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Label(
-            filter_frame,
+            self._filter_frame,
             text=_("gui", "inventory", "filter", "not_linked"),
             padding=(0, 0, LABEL_SPACING, 0),
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Checkbutton(
-            filter_frame, variable=self._filters["upcoming"]
+            self._filter_frame, variable=self._filters["upcoming"]
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Label(
-            filter_frame,
+            self._filter_frame,
             text=_("gui", "inventory", "filter", "upcoming"),
             padding=(0, 0, LABEL_SPACING, 0),
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Checkbutton(
-            filter_frame, variable=self._filters["expired"]
+            self._filter_frame, variable=self._filters["expired"]
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Label(
-            filter_frame,
+            self._filter_frame,
             text=_("gui", "inventory", "filter", "expired"),
             padding=(0, 0, LABEL_SPACING, 0),
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Checkbutton(
-            filter_frame, variable=self._filters["excluded"]
+            self._filter_frame, variable=self._filters["excluded"]
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Label(
-            filter_frame,
+            self._filter_frame,
             text=_("gui", "inventory", "filter", "excluded"),
             padding=(0, 0, LABEL_SPACING, 0),
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Checkbutton(
-            filter_frame, variable=self._filters["finished"]
+            self._filter_frame, variable=self._filters["finished"]
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Label(
-            filter_frame,
+            self._filter_frame,
             text=_("gui", "inventory", "filter", "finished"),
             padding=(0, 0, LABEL_SPACING, 0),
         ).grid(column=(icolumn := icolumn + 1), row=0)
         ttk.Button(
-            filter_frame, text=_("gui", "inventory", "filter", "refresh"), command=self.refresh
+            self._filter_frame, text=_("gui", "inventory", "filter", "refresh"), command=self.refresh
         ).grid(column=(icolumn := icolumn + 1), row=0)
-        # Inventory view
-        self._canvas = tk.Canvas(master, scrollregion=(0, 0, 0, 0))
-        self._canvas.grid(column=0, row=1, sticky="nsew")
-        master.rowconfigure(1, weight=1)
-        master.columnconfigure(0, weight=1)
-        xscroll = ttk.Scrollbar(master, orient="horizontal", command=self._canvas.xview)
-        xscroll.grid(column=0, row=2, sticky="ew")
-        yscroll = ttk.Scrollbar(master, orient="vertical", command=self._canvas.yview)
-        yscroll.grid(column=1, row=1, sticky="ns")
-        self._canvas.configure(xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
-        self._canvas.bind("<Configure>", self._canvas_update)
-        self._main_frame = ttk.Frame(self._canvas)
-        self._canvas.bind(
-            "<Enter>", lambda e: self._canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+        # Summary line for the "all active" view
+        self._active_summary = ttk.Label(
+            active_page,
+            text=_("gui", "inventory", "active_summary").format(count=0),
+            padding=(4, 0, 4, 4),
         )
-        self._canvas.bind("<Leave>", lambda e: self._canvas.unbind_all("<MouseWheel>"))
-        self._canvas.create_window(0, 0, anchor="nw", window=self._main_frame)
+        self._active_summary.grid(column=0, row=0, columnspan=2, sticky="ew")
+
+        # Separate canvases per nested tab (Tk can't share one widget across notebook pages)
+        self._canvas, self._main_frame = self._build_campaign_canvas(filtered_page, row=1)
+        self._active_canvas, self._active_main_frame = self._build_campaign_canvas(
+            active_page, row=1
+        )
+        filtered_page.rowconfigure(1, weight=1)
+        filtered_page.columnconfigure(0, weight=1)
+        active_page.rowconfigure(1, weight=1)
+        active_page.columnconfigure(0, weight=1)
+
         self._campaigns: dict[DropsCampaign, CampaignDisplay] = {}
+        self._active_campaigns: dict[DropsCampaign, CampaignDisplay] = {}
         self._drops: dict[str, ttk.Label] = {}
+        self._active_drops: dict[str, ttk.Label] = {}
+        self._next_row = 0
+
+    def _build_campaign_canvas(
+        self, parent: ttk.Widget, *, row: int
+    ) -> tuple[tk.Canvas, ttk.Frame]:
+        canvas = tk.Canvas(parent, scrollregion=(0, 0, 0, 0))
+        canvas.grid(column=0, row=row, sticky="nsew")
+        xscroll = ttk.Scrollbar(parent, orient="horizontal", command=canvas.xview)
+        xscroll.grid(column=0, row=row + 1, sticky="ew")
+        yscroll = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        yscroll.grid(column=1, row=row, sticky="ns")
+        canvas.configure(xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+        canvas.bind("<Configure>", lambda e, c=canvas: self._canvas_update(c))
+        main_frame = ttk.Frame(canvas)
+        canvas.bind("<Enter>", lambda e, c=canvas: c.bind_all("<MouseWheel>", self._on_mousewheel))
+        canvas.bind("<Leave>", lambda e, c=canvas: c.unbind_all("<MouseWheel>"))
+        canvas.create_window(0, 0, anchor="nw", window=main_frame)
+        return canvas, main_frame
 
     def configure_theme(self, *, bg: str):
         # Canvas background needs manual control
         self._canvas.configure(bg=bg)
+        self._active_canvas.configure(bg=bg)
+
+    def _showing_all_active(self) -> bool:
+        return self._views.index("current") == self.VIEW_ALL_ACTIVE
 
     def _update_visibility(self, campaign: DropsCampaign):
-        # True if the campaign is supposed to show, False makes it hidden.
-        frame = self._campaigns[campaign]["frame"]
+        filtered = self._campaigns.get(campaign)
+        active = self._active_campaigns.get(campaign)
+        if not filtered or not active or "frame" not in filtered or "frame" not in active:
+            return
+
+        # Filtered view — honour checkbox filters
+        frame = filtered["frame"]
         not_linked = bool(self._filters["not_linked"].get())
         expired = bool(self._filters["expired"].get())
         excluded = bool(self._filters["excluded"].get())
@@ -1514,10 +1562,20 @@ class InventoryOverview:
         else:
             frame.grid_remove()
 
+        # All-active view — every currently running non-sub campaign
+        active_frame = active["frame"]
+        if campaign.required_minutes > 0 and campaign.active:
+            active_frame.grid()
+        else:
+            active_frame.grid_remove()
+
     def _on_tab_switched(self, event: tk.Event[ttk.Notebook]) -> None:
         if self._manager.tabs.current_tab() == 1:
-            # refresh only if we're switching to the tab
+            # refresh only if we're switching to the inventory tab
             self.refresh()
+
+    def _on_view_switched(self, event: tk.Event[ttk.Notebook] | None = None) -> None:
+        self.refresh()
 
     def get_status(self, campaign: DropsCampaign) -> tuple[str, str]:
         if campaign.active:
@@ -1532,31 +1590,60 @@ class InventoryOverview:
         return (status_text, status_color)
 
     def refresh(self):
-        for campaign in self._campaigns:
-            # status
-            status_label = self._campaigns[campaign]["status"]
+        visible_active = 0
+        for campaign, filtered in self._campaigns.items():
+            active = self._active_campaigns.get(campaign)
+            if not filtered or not active or "status" not in filtered or "status" not in active:
+                continue
             status_text, status_color = self.get_status(campaign)
-            status_label.config(text=status_text, foreground=status_color)
-            # visibility
+            filtered["status"].config(text=status_text, foreground=status_color)
+            active["status"].config(text=status_text, foreground=status_color)
             self._update_visibility(campaign)
-        self._canvas_update()
+            if campaign.required_minutes > 0 and campaign.active:
+                visible_active += 1
+        self._active_summary.config(
+            text=_("gui", "inventory", "active_summary").format(count=visible_active)
+        )
+        self._canvas_update(self._canvas)
+        self._canvas_update(self._active_canvas)
 
-    def _canvas_update(self, event: tk.Event[tk.Canvas] | None = None):
-        self._canvas.update_idletasks()
-        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+    def _canvas_update(
+        self,
+        canvas: tk.Canvas | tk.Event[tk.Canvas] | None = None,
+    ):
+        if isinstance(canvas, tk.Event):
+            target = canvas.widget
+        elif canvas is None:
+            target = self._canvas
+        else:
+            target = canvas
+        target.update_idletasks()
+        target.configure(scrollregion=target.bbox("all"))
 
     def _on_mousewheel(self, event: tk.Event[tk.Misc]):
         delta = -1 if event.delta > 0 else 1
         state: int = event.state if isinstance(event.state, int) else 0
+        # Scroll whichever canvas the pointer is over
+        widget = event.widget
+        canvas = self._active_canvas if self._showing_all_active() else self._canvas
+        if isinstance(widget, tk.Canvas):
+            canvas = widget
         if state & 1:
-            scroll = self._canvas.xview_scroll
+            scroll = canvas.xview_scroll
         else:
-            scroll = self._canvas.yview_scroll
+            scroll = canvas.yview_scroll
         scroll(delta, "units")
 
-    async def add_campaign(self, campaign: DropsCampaign) -> None:
-        campaign_frame = ttk.Frame(self._main_frame, relief="ridge", borderwidth=1, padding=4)
-        campaign_frame.grid(column=0, row=len(self._campaigns), sticky="nsew", pady=3)
+    async def _populate_campaign_card(
+        self,
+        parent: ttk.Frame,
+        campaign: DropsCampaign,
+        *,
+        row: int,
+        drops_map: dict[str, ttk.Label],
+    ) -> CampaignDisplay:
+        campaign_frame = ttk.Frame(parent, relief="ridge", borderwidth=1, padding=4)
+        campaign_frame.grid(column=0, row=row, sticky="nsew", pady=3)
         campaign_frame.rowconfigure(4, weight=1)
         campaign_frame.columnconfigure(1, weight=1)
         campaign_frame.columnconfigure(3, weight=10000)
@@ -1570,10 +1657,7 @@ class InventoryOverview:
             campaign_frame, text=status_text, takefocus=False, foreground=status_color
         )
         status_label.grid(column=1, row=1, sticky="w", padx=4)
-        # NOTE: We have to save the campaign's frame and status before any awaits happen,
-        # otherwise the len(self._campaigns) call may overwrite an existing frame,
-        # if the campaigns are added concurrently.
-        self._campaigns[campaign] = {
+        display: CampaignDisplay = {
             "frame": campaign_frame,
             "status": status_label,
         }
@@ -1651,18 +1735,49 @@ class InventoryOverview:
                     image=image,
                     compound="bottom",
                 ).grid(column=i, row=0, padx=5)
-            self._drops[drop.id] = label = ttk.Label(drop_frame, justify=tk.CENTER)
+            drops_map[drop.id] = label = ttk.Label(drop_frame, justify=tk.CENTER)
             self.update_progress(drop, label)
             label.grid(column=0, row=1)
+        return display
+
+    async def add_campaign(self, campaign: DropsCampaign) -> None:
+        # Allocate a stable row before any await so concurrent adds don't collide.
+        row = self._next_row
+        self._next_row += 1
+
+        self._campaigns[campaign] = await self._populate_campaign_card(
+            self._main_frame, campaign, row=row, drops_map=self._drops
+        )
+        self._active_campaigns[campaign] = await self._populate_campaign_card(
+            self._active_main_frame, campaign, row=row, drops_map=self._active_drops
+        )
+
         if self._manager.tabs.current_tab() == 1:
             self._update_visibility(campaign)
-            self._canvas_update()
+            active_count = sum(
+                1
+                for c, display in self._campaigns.items()
+                if display and c.required_minutes > 0 and c.active
+            )
+            self._active_summary.config(
+                text=_("gui", "inventory", "active_summary").format(count=active_count)
+            )
+            self._canvas_update(self._canvas)
+            self._canvas_update(self._active_canvas)
 
     def clear(self) -> None:
         for child in self._main_frame.winfo_children():
             child.destroy()
+        for child in self._active_main_frame.winfo_children():
+            child.destroy()
         self._drops.clear()
+        self._active_drops.clear()
         self._campaigns.clear()
+        self._active_campaigns.clear()
+        self._next_row = 0
+        self._active_summary.config(
+            text=_("gui", "inventory", "active_summary").format(count=0)
+        )
 
     def update_progress(self, drop: TimedDrop, label: ttk.Label) -> None:
         progress_text: str
@@ -1704,10 +1819,9 @@ class InventoryOverview:
         label.config(text=progress_text, foreground=progress_color)
 
     def update_drop(self, drop: TimedDrop) -> None:
-        label = self._drops.get(drop.id)
-        if label is None:
-            return
-        self.update_progress(drop, label)
+        for label in (self._drops.get(drop.id), self._active_drops.get(drop.id)):
+            if label is not None:
+                self.update_progress(drop, label)
 
 
 def proxy_validate(entry: PlaceholderEntry, settings: Settings) -> bool:
@@ -2382,6 +2496,19 @@ class HelpTab:
             link="https://www.twitch.tv/drops/campaigns",
             text=_("gui", "help", "links", "campaigns"),
         ).grid(column=0, row=1, sticky="nsew")
+        LinkLabel(
+            links,
+            link=f"{FORK_REPOSITORY}/releases/tag/dev-build",
+            text=_("gui", "help", "links", "releases"),
+        ).grid(column=0, row=2, sticky="nsew")
+        LinkLabel(
+            links,
+            link=(
+                f"https://raw.githubusercontent.com/{FORK_OWNER}/"
+                "TwitchDropsMiner/master/gql_overrides.json"
+            ),
+            text=_("gui", "help", "links", "gql_overrides"),
+        ).grid(column=0, row=3, sticky="nsew")
         # How It Works
         howitworks = ttk.LabelFrame(
             center_frame, padding=(4, 0, 4, 4), text=_("gui", "help", "how_it_works")

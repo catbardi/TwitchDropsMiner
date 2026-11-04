@@ -41,6 +41,17 @@ jobs:
             exit 1
           fi
 
+      - name: Validate gql_overrides.json
+        run: python -m json.tool gql_overrides.json > /dev/null
+
+      - name: Install aiohttp for GQL hash probe
+        run: |
+          python -m pip install -U pip
+          python -m pip install aiohttp
+
+      - name: Probe Twitch GQL hashes
+        run: python scripts/check_gql_hashes.py
+
   windows:
     name: Windows
     runs-on: windows-latest

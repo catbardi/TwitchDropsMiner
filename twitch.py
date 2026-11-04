@@ -519,7 +519,7 @@ class _AuthState:
             jar.update_cookies(cookie, client_info.CLIENT_URL)
             jar.save(COOKIES_PATH)
             restrict_file_permissions(COOKIES_PATH)
-        self._twitch.gui.login._logout_button.config(state="normal")
+        self._twitch.gui.login._logout_button.configure(state="normal")
         self._logged_in.set()
 
 
@@ -651,9 +651,15 @@ class Twitch:
 
     def print(self, message: str):
         """
-        Can be used to print messages within the GUI.
+        Status message: written to the background log file (not the GUI journal).
         """
         self.gui.print(message)
+
+    def print_error(self, message: str):
+        """
+        Critical error: written to the log file and shown in the GUI journal.
+        """
+        self.gui.print_error(message)
 
     def save(self, *, force: bool = False) -> None:
         """
@@ -1398,7 +1404,7 @@ class Twitch:
                     raw_response = await response.read()  # noqa
                     yield response
                     return
-                self.print(_("error", "site_down").format(seconds=round(delay)))
+                self.print_error(_("error", "site_down").format(seconds=round(delay)))
             except aiohttp.ClientConnectorCertificateError:
                 # for a case where SSL verification fails
                 raise
@@ -1408,7 +1414,7 @@ class Twitch:
                 # connection problems, retry
                 if backoff.steps > 1:
                     # just so that quick retries that sometimes happen, aren't shown
-                    self.print(
+                    self.print_error(
                         _("error", "no_connection").format(seconds=round(delay), url=str(url))
                     )
             finally:
@@ -1480,7 +1486,7 @@ class Twitch:
                                     operation=op_name,
                                     url=GQL_OVERRIDES_URL,
                                 )
-                                self.print(message)
+                                self.print_error(message)
                                 self.gui.status.update(
                                     _("gui", "status", "gql_outdated").format(
                                         operation=op_name

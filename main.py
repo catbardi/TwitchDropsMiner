@@ -78,14 +78,14 @@ if __name__ == "__main__":
         def debug_ws(self) -> int:
             """
             If the debug flag is True, return DEBUG.
-            If the main logging level is DEBUG, return INFO to avoid seeing raw messages.
-            Otherwise, return NOTSET to inherit the global logging level.
+            If -vvvv, return INFO (summary without raw payloads).
+            Otherwise WARNING — main logger is always DEBUG, so children must not inherit it.
             """
             if self._debug_ws:
                 return logging.DEBUG
             elif self._verbose >= 4:
                 return logging.INFO
-            return logging.NOTSET
+            return logging.WARNING
 
         @property
         def debug_gql(self) -> int:
@@ -93,7 +93,7 @@ if __name__ == "__main__":
                 return logging.DEBUG
             elif self._verbose >= 4:
                 return logging.INFO
-            return logging.NOTSET
+            return logging.WARNING
 
     # handle input parameters
     # NOTE: parser output is shown via message box
@@ -143,17 +143,15 @@ if __name__ == "__main__":
             # this language doesn't exist - stick to English
             pass
 
-        # handle logging stuff
-        if settings.logging_level > logging.DEBUG:
-            # redirect the root logger into a NullHandler, effectively ignoring all logging calls
-            # that aren't ours. This always runs, unless the main logging level is DEBUG or lower.
-            logging.getLogger().addHandler(logging.NullHandler())
+        # Full DEBUG trail always goes to log.txt; GUI journal shows ERROR+ only.
+        # Mute third-party root loggers so they never flood our file or the journal.
+        logging.getLogger().addHandler(logging.NullHandler())
         logger = logging.getLogger("TwitchDrops")
-        logger.setLevel(settings.logging_level)
-        if settings.log:
-            handler = logging.FileHandler(LOG_PATH)
-            handler.setFormatter(FILE_FORMATTER)
-            logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        file_handler = logging.FileHandler(LOG_PATH, encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(FILE_FORMATTER)
+        logger.addHandler(file_handler)
         logging.getLogger("TwitchDrops.gql").setLevel(settings.debug_gql)
         logging.getLogger("TwitchDrops.websocket").setLevel(settings.debug_ws)
 
@@ -168,12 +166,11 @@ if __name__ == "__main__":
         except CaptchaRequired:
             exit_status = 1
             client.prevent_close()
-            client.print(_("error", "captcha"))
+            client.print_error(_("error", "captcha"))
         except Exception:
             exit_status = 1
             client.prevent_close()
-            client.print("Fatal error encountered:\n")
-            client.print(traceback.format_exc())
+            client.print_error("Fatal error encountered:\n" + traceback.format_exc())
         finally:
             if sys.platform == "linux":
                 loop.remove_signal_handler(signal.SIGINT)
@@ -183,7 +180,7 @@ if __name__ == "__main__":
         if not client.gui.close_requested:
             # user didn't request the closure
             client.gui.tray.change_icon("error")
-            client.print(_("status", "terminated"))
+            client.print_error(_("status", "terminated"))
             client.gui.status.update(_("gui", "status", "terminated"))
             # notify the user about the closure
             client.gui.grab_attention(sound=True)

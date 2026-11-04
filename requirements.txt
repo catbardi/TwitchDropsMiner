@@ -1,5 +1,6 @@
 aiohttp>=3.14.3,<4.0
 Pillow>=12.3.0
+customtkinter>=5.2.0
 pystray
 truststore
 zendriver

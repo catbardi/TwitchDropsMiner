@@ -130,6 +130,18 @@
                 "ready_to_claim": "Готово к получению ⏳"
             },
             "active_summary": "Сейчас активных кампаний Twitch: {count}",
+            "search_placeholder": "Игра или кампания…",
+            "sort": {
+                "ending": "Скоро закончится",
+                "game": "По игре",
+                "name": "По названию"
+            },
+            "actions": {
+                "add_priority": "В приоритет",
+                "remove_priority": "Убрать из приоритета",
+                "add_exclude": "В исключения",
+                "remove_exclude": "Убрать из исключений"
+            },
             "starts": "Начало: {time}",
             "ends": "Окончание: {time}",
             "allowed_channels": "Участвующие каналы:",

@@ -42,6 +42,7 @@ to_add: list[tuple[Path, str, bool]] = [
     (Path("icons/idle.ico"), "./icons", True),
     (Path("icons/error.ico"), "./icons", True),
     (Path("icons/maint.ico"), "./icons", True),
+    (Path("icons/app.png"), "./icons", True),
     # Remote-updatable GQL hash overrides (bundled fallback)
     (Path("gql_overrides.json"), ".", True),
     # SeleniumWire HTTPS/SSL cert file and key
@@ -64,11 +65,24 @@ hooksconfig: dict[str, Any] = {}
 binaries: list[tuple[Path, str]] = []
 hiddenimports: list[str] = [
     "PIL._tkinter_finder",
+    "customtkinter",
+    "ui",
+    "ui.theme",
+    "ui.widgets",
+    "ui.inventory_list",
     "setuptools._distutils.log",
     "setuptools._distutils.dir_util",
     "setuptools._distutils.file_util",
     "setuptools._distutils.archive_util",
 ]
+
+# CustomTkinter ships theme JSON / assets that must be bundled
+try:
+    import customtkinter as _ctk_pkg
+    _ctk_dir = Path(_ctk_pkg.__file__).resolve().parent
+    datas.append((_ctk_dir / "assets", "customtkinter/assets"))
+except Exception:
+    pass
 
 if sys.platform == "linux":
     # Needed files for better system tray support on Linux via pystray (AppIndicator backend).

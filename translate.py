@@ -154,11 +154,27 @@ class GUIInvTabs(TypedDict):
     all_active: str
 
 
+class GUIInvSort(TypedDict):
+    ending: str
+    game: str
+    name: str
+
+
+class GUIInvActions(TypedDict):
+    add_priority: str
+    remove_priority: str
+    add_exclude: str
+    remove_exclude: str
+
+
 class GUIInventory(TypedDict):
     tabs: GUIInvTabs
     filter: GUIInvFilter
     status: GUIInvStatus
     active_summary: str
+    search_placeholder: str
+    sort: GUIInvSort
+    actions: GUIInvActions
     starts: str
     ends: str
     allowed_channels: str
@@ -393,6 +409,18 @@ default_translation: Translation = {
                 "ready_to_claim": "Ready to claim ⏳",
             },
             "active_summary": "Currently active Twitch campaigns: {count}",
+            "search_placeholder": "Game or campaign...",
+            "sort": {
+                "ending": "Ending soonest",
+                "game": "By game",
+                "name": "By campaign name",
+            },
+            "actions": {
+                "add_priority": "Add to priority",
+                "remove_priority": "Remove from priority",
+                "add_exclude": "Add to exclude",
+                "remove_exclude": "Remove from exclude",
+            },
             "starts": "Starts: {time}",
             "ends": "Ends: {time}",
             "allowed_channels": "Allowed Channels:",

@@ -96,6 +96,12 @@ class Settings:
     def alter(self) -> None:
         self._altered = True
 
+    def persist(self) -> None:
+        """Mark dirty and write settings.json immediately (survive kill/crash)."""
+        self._altered = True
+        self.save()
+
     def save(self, *, force: bool = False) -> None:
         if self._altered or force:
             json_save(SETTINGS_PATH, self._settings, sort=True)
+            self._altered = False

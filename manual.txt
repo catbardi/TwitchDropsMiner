@@ -7,11 +7,12 @@ Available command line arguments:
 • --tray
 	Start the application as minimised into tray.
 • -v
-	Increase verbosity level. Can be stacked up several times (-vv, -vvv, etc.) to show
-	increasingly more information during application runtime.
+	Increase verbosity for GQL/WebSocket child loggers when stacked to -vvvv (or use
+	--debug-gql / --debug-ws). The main application always records a full DEBUG trail
+	to 'log.txt'. The GUI journal shows only ERROR and above.
 • --log
-	Enables logging of runtime information into a 'log.txt' file. Verbosity level of this logging
-	matches the level set by `-v`.
+	Kept for compatibility. A full 'log.txt' is always written next to the application;
+	this flag is no longer required.
 • --dump
 	Start the application in a data-dump mode, where a 'dump.dat' file is created.
 	The file contains anonymous raw Twitch API data, studying of which can help troubleshoot

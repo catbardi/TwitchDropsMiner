@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import io
 import os
 import re
@@ -119,7 +120,16 @@ def restrict_file_permissions(path: Path) -> None:
 
 
 def set_root_icon(root: tk.Tk, image_path: Path | str) -> None:
-    with Image_module.open(image_path) as image:
+    icon_path = Path(image_path)
+    # Windows title bar uses iconbitmap (.ico). CustomTkinter also installs its
+    # default icon after 200ms unless iconbitmap was already called — so call it
+    # first to both set our icon and block the CTk override.
+    if sys.platform == "win32" and icon_path.suffix.lower() == ".ico":
+        with suppress(tk.TclError, OSError):
+            # Positional path sets the current window icon and (on CTk)
+            # marks iconbitmap as already called so CTk won't replace it.
+            root.iconbitmap(str(icon_path.resolve()))
+    with Image_module.open(icon_path) as image:
         icon_photo = PhotoImage(master=root, image=image)
     root.iconphoto(True, icon_photo)  # type: ignore[arg-type]
     # keep a reference to the PhotoImage to avoid the ResourceWarning
@@ -336,15 +346,15 @@ def merge_json(obj: JsonType, template: Mapping[Any, Any]) -> None:
             # unknown key: overwrite from template
             del obj[k]
         elif type(v) is not type(template[k]):
-            # types don't match: overwrite from template
-            obj[k] = template[k]
+            # types don't match: overwrite from template (deep copy — sets/lists)
+            obj[k] = copy.deepcopy(template[k])
         elif isinstance(v, dict):
             assert isinstance(template[k], dict)
             merge_json(v, template[k])
     # ensure the object is not missing any keys
     for k in template.keys():
         if k not in obj:
-            obj[k] = template[k]
+            obj[k] = copy.deepcopy(template[k])
 
 
 def json_load(path: Path, defaults: _JSON_T, *, merge: bool = True) -> _JSON_T:
@@ -380,9 +390,9 @@ def json_load(path: Path, defaults: _JSON_T, *, merge: bool = True) -> _JSON_T:
                 candidate.unlink(missing_ok=True)
     # handle defaults and merging
     if combined is None:
-        combined = dict(defaults)  # always make a copy of defaults
+        combined = copy.deepcopy(defaults)  # never share mutable defaults (set/list)
     elif merge:
-        merge_json(combined, dict(defaults))
+        merge_json(combined, defaults)
     return cast(_JSON_T, combined)
 
 
